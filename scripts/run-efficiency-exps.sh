@@ -64,7 +64,7 @@ then
       export GCARE_BSK_BUDGET=4096
     fi
     for data in ${datasets[@]}; do
-      ./run-exp.sh ${method} ${data} ${p} ${budget} ${seed} ${repeat} ${result_dir}
+      ./run-exp.sh ${method} ${data} ${p} ${seed} ${repeat} ${result_dir}
     done
   done
 fi
