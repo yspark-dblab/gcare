@@ -29,6 +29,6 @@ mkdir -p ${result_dir}
 
 cmd="${bin} -q -m ${method} -i ${input_dir} -d ${data_dir}/${data} -p ${p} -n ${repeat} -s ${seed} -o ${output_file}"
 echo ${cmd}
-#${cmd}
+${cmd}
 
 echo "#${commit_id}" >> ${output_file}
