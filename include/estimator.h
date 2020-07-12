@@ -36,7 +36,7 @@ public:
 		sample_ratio = p;
 		subquery_card_.clear();
 		Init();
-		
+
 		num_subqueries_ = DecomposeQuery();
 		for (int j = 0; j < num_subqueries_; j++) {
 			card_vec_.clear();

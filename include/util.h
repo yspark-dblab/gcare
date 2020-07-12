@@ -4,6 +4,7 @@
 #include <boost/functional/hash.hpp>
 #include <string>
 #include <vector>
+#include <utility>
 
 #define BINARY_THRESHOLD 4
 
@@ -83,6 +84,10 @@ struct Edge {
 	bool operator==(const Edge& other) const {
 		return src == other.src && dst == other.dst && el == other.el;
 	}
+
+  pair<string, string> toVListAndLabelSeq() {
+    return make_pair(to_string(src) + ";" + to_string(dst), to_string(el));
+  }
 };
 
 struct EdgeHasher {
@@ -100,5 +105,8 @@ struct EdgeHasher {
 	}
 };
 
+string sortVList(const string &vList);
+bool isAcyclicConnected(const string &vList);
+string extractLabelSeq(const string &subVList, const string &queryVList, const string &queryLabelSeq);
 
 #endif

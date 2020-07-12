@@ -12,7 +12,7 @@ endif()
 
 project (Gcare)
 
-add_executable(gcare_graph ./src/main.cc ./src/util.cc ./src/data_graph.cc ./src/query_graph.cc ./src/wander_join.cc ./src/cset.cc ./src/sumrdf.cc ./src/jsub.cc ./src/impr.cc)
+add_executable(gcare_graph ./src/main.cc ./src/util.cc ./src/data_graph.cc ./src/query_graph.cc ./src/wander_join.cc ./src/cset.cc ./src/sumrdf.cc ./src/jsub.cc ./src/impr.cc ./src/mt.cc)
 set_target_properties(gcare_graph PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(gcare_graph PRIVATE ./include)
 target_compile_options(gcare_graph PRIVATE -g -O2 -std=c++11 -Bstatic)

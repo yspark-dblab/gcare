@@ -22,6 +22,7 @@
 #include "../include/sumrdf.h"
 #include "../include/wander_join.h"
 #include "../include/jsub.h"
+#include "../include/mt.h"
 #endif
 #include "../include/memory.h"
 
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
         ("input,i", po::value<std::string>(), "input file (in build mode: text data graph, in query mode: text query graph)")
         ("output,o", po::value<std::string>(), "output directory in query mode")
         ("data,d", po::value<std::string>(), "binary datafile")
+        ("catfile,c", po::value<std::string>(), "catalogue file")
         ("ratio,p", po::value<string>()->default_value("0.03"), "sampling ratio")
         ("iteration,n", po::value<int>()->default_value(30), "iterations per query")
         ("seed,s", po::value<int>()->default_value(0), "random seed");
@@ -91,6 +93,9 @@ int main(int argc, char** argv) {
     if (method == string("cset")) {
         summary_str = summary_str + ".p" + vm["ratio"].as<string>();
         estimator = new CharacteristicSets;
+    } else if (method == string("mt")) {
+        summary_str = vm["catfile"].as<string>();
+        estimator = new MarkovTable;
     } else if (method == string("impr")) {
         summary_str = summary_str + ".p" + vm["ratio"].as<string>();
         estimator = new Impr;
