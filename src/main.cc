@@ -93,9 +93,6 @@ int main(int argc, char** argv) {
     if (method == string("cset")) {
         summary_str = summary_str + ".p" + vm["ratio"].as<string>();
         estimator = new CharacteristicSets;
-    } else if (method == string("mt")) {
-        summary_str = vm["catfile"].as<string>();
-        estimator = new MarkovTable;
     } else if (method == string("impr")) {
         summary_str = summary_str + ".p" + vm["ratio"].as<string>();
         estimator = new Impr;
@@ -111,6 +108,10 @@ int main(int argc, char** argv) {
     }
 #endif
     summary_str = summary_str + ".s" + to_string(seed);
+    if (method == string("mt")) {
+        summary_str = vm["catfile"].as<string>();
+        estimator = new MarkovTable;
+    }
 
   std::cout << "summary: " << summary_str << "\n";
   string output_str  = vm["output"].as<string>();
