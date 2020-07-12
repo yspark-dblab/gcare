@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 #endif
     summary_str = summary_str + ".s" + to_string(seed);
 #ifndef RELATION
-    if (method == string("mt")) {
+    if (vm.count("query") && method == string("mt")) {
         summary_str = vm["catfile"].as<string>();
         estimator = new MarkovTable;
     }
@@ -129,16 +129,18 @@ int main(int argc, char** argv) {
       g.ClearRawData();
     }
     g.ReadBinary(data_str.c_str());
-    srand(seed);
-    auto chkpt = Clock::now();
-    estimator->Summarize(g, summary_str.c_str(), p); 
-    auto elapsed_nanoseconds = Clock::now() - chkpt;
-    double summary_build_time = elapsed_nanoseconds.count() / 1000000;
-    std::fstream fout;
-    string output_fn = output_str;
-    fout.open(output_fn.c_str(), std::fstream::out);
-    fout << summary_build_time << endl;
-    fout.close();
+    if (method != string("mt")) {
+        srand(seed);
+        auto chkpt = Clock::now();
+        estimator->Summarize(g, summary_str.c_str(), p);
+        auto elapsed_nanoseconds = Clock::now() - chkpt;
+        double summary_build_time = elapsed_nanoseconds.count() / 1000000;
+        std::fstream fout;
+        string output_fn = output_str;
+        fout.open(output_fn.c_str(), std::fstream::out);
+        fout << summary_build_time << endl;
+        fout.close();
+    }
   } else {
     //query mode
     std::cout << "Query Mode\n";
