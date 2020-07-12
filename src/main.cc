@@ -108,10 +108,12 @@ int main(int argc, char** argv) {
     }
 #endif
     summary_str = summary_str + ".s" + to_string(seed);
+#ifndef RELATION
     if (method == string("mt")) {
         summary_str = vm["catfile"].as<string>();
         estimator = new MarkovTable;
     }
+#endif
 
   std::cout << "summary: " << summary_str << "\n";
   string output_str  = vm["output"].as<string>();
