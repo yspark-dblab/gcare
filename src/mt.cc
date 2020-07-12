@@ -60,6 +60,7 @@ double MarkovTable::EstCard(int subquery_index) {
     }
 
     // perform BFS
+    set<string> inQueue;
     while (!queue.empty()) {
         string currentVList = queue.front();
         queue.pop();
@@ -67,7 +68,9 @@ double MarkovTable::EstCard(int subquery_index) {
         for (const string &nextVList : ceg[currentVList]) {
             set<pair<string, string>> extensions = getExtensions(currentVList, nextVList);
             estimates.insert(pair<string, double>(nextVList, getMaxExt(extensions, queryVList, queryLabelSeq)));
+            if (inQueue.count(nextVList)) continue;
             queue.push(nextVList);
+            inQueue.insert(nextVList);
         }
     }
 
@@ -83,15 +86,18 @@ double MarkovTable::GetSelectivity() {
 }
 
 void MarkovTable::getDecom(const vector<string> &vListEdges, const int &mtLen, int depth, const string &current, const string &parent) {
-    if (depth == mtLen) {
-        largestMTEntries.insert(current);
-    }
-    if (depth == 1) {
-        ceg.insert(pair<string, set<string>>(sortVList(current), set<string>()));
-    } else {
-        ceg.insert(pair<string, set<string>>(sortVList(current), set<string>()));
-        ceg[parent].insert(current);
-        if (depth == vListEdges.size()) return;
+    if (!parent.empty() || depth == mtLen) {
+        string sortedCurrent = sortVList(current);
+        if (depth == mtLen) {
+            largestMTEntries.insert(sortedCurrent);
+        }
+        if (!parent.empty()) {
+            ceg[sortVList(parent)].insert(sortedCurrent);
+            if (depth == vListEdges.size()) {
+                ceg.insert(pair<string, set<string>>(sortedCurrent, set<string>()));
+                return;
+            }
+        }
     }
 
     for (int i = 0; i < vListEdges.size(); i++) {

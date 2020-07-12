@@ -86,7 +86,7 @@ struct Edge {
 	}
 
   pair<string, string> toVListAndLabelSeq() {
-    return make_pair(to_string(src) + ";" + to_string(dst), to_string(el));
+    return make_pair(to_string(src) + "-" + to_string(dst), to_string(el));
   }
 };
 
