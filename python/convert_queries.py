@@ -37,7 +37,8 @@ def create_query(query, dest_prefix, index):
 
     vertices = sorted(list(vertices))
 
-    with open(dest_prefix + '_' + '{:02d}'.format(index), 'w') as query_file:
+    file_name = dest_prefix + '_' + '{:02d}'.format(index) + '.txt'
+    with open(file_name, 'w') as query_file:
         query_file.write('t # s ' + str(index) + '\n')
         for v in vertices:
             query_file.write('v ' + str(v) + ' -1 -1\n')
