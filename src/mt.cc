@@ -6,7 +6,6 @@
 
 void MarkovTable::Init() {
     getSubstructureFlag = true;
-    mt_.clear();
     ceg.clear();
     largestMTEntries.clear();
 }
@@ -67,7 +66,12 @@ double MarkovTable::EstCard(int subquery_index) {
 
         for (const string &nextVList : ceg[currentVList]) {
             set<pair<string, string>> extensions = getExtensions(currentVList, nextVList);
-            estimates.insert(pair<string, double>(nextVList, getMaxExt(extensions, queryVList, queryLabelSeq)));
+            double nextEst = estimates[currentVList] * getMaxExt(extensions, queryVList, queryLabelSeq);
+            if (estimates.count(nextVList)) {
+                estimates[nextVList] = max(estimates[nextVList], nextEst);
+            } else {
+                estimates[nextVList] = nextEst;
+            }
             if (inQueue.count(nextVList)) continue;
             queue.push(nextVList);
             inQueue.insert(nextVList);
