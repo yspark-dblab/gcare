@@ -69,6 +69,9 @@ struct Edge {
 	Edge(int s, int d, int e) : src(s), dst(d), el(e) {}
 	Edge() {}
 
+	static const int FORWARD = 0;
+    static const int BACKWARD = 1;
+
 	bool operator<(const Edge& other) const {
 		if (src < other.src)
 			return true;
@@ -88,6 +91,12 @@ struct Edge {
   pair<string, string> toVListAndLabelSeq() {
     return make_pair(to_string(src) + "-" + to_string(dst), to_string(el));
   }
+};
+
+template<> struct hash<Edge> {
+    size_t operator()(const Edge& e) const {
+        return e.src + e.dst + e.el;
+    }
 };
 
 struct EdgeHasher {

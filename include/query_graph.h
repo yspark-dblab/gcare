@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include "util.h"
 
 class QueryGraph {
@@ -12,6 +13,7 @@ private:
 	vector<vector<pair<int, int>>> adj_, in_adj_;
 	vector<int> vl_;
 	vector<int> bound_;
+	unordered_map<Edge, int> edge_enc_;
 
 public:
 	QueryGraph() { 
@@ -21,6 +23,7 @@ public:
 		in_adj_.clear();
 		vl_.clear();
 		bound_.clear();
+        edge_enc_.clear();
 	}
 	void ReadText(const char*);
     void ReadText(std::vector<std::string>&);
@@ -31,6 +34,9 @@ public:
 	int GetELabel(int, int);
 	inline int GetVLabel(int v) { return vl_[v]; }
 	inline int GetBound(int v) { return bound_[v]; }
+
+    void getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result);
+	int encodeSubQ(const vector<Edge> &edges);
 
   string fn_; // XXX
 

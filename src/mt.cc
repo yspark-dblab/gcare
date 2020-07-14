@@ -3,6 +3,8 @@
 #include "../include/util.h"
 #include <queue>
 #include <limits>
+#include <cmath>
+#include <deque>
 
 void MarkovTable::Init() {
     getSubstructureFlag = true;
@@ -45,6 +47,99 @@ bool MarkovTable::GetSubstructure(int subquery_index) {
 }
 
 double MarkovTable::EstCard(int subquery_index) {
+    vector<tuple<int, int, Edge, Edge>> twoPaths;
+    q->getAll2Paths(twoPaths);
+
+    int subQEnc;
+    double estimates[1 << q->GetNumEdges()];
+    deque<vector<Edge>> queue;
+    for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
+        vector<Edge> starter;
+        starter.emplace_back(get<2>(twoPath));
+        starter.emplace_back(get<3>(twoPath));
+        queue.emplace_back(starter);
+        subQEnc = q->encodeSubQ(starter);
+        estimates[subQEnc] = mt2_[get<0>(twoPath)][get<1>(twoPath)][get<2>(twoPath).el][get<3>(twoPath).el];
+    }
+
+    double extRate, currentEst;
+    bool processed[1 << q->GetNumEdges()];
+    while (!queue.empty()) {
+        const vector<Edge> &current = queue.front();
+        queue.pop_front();
+        currentEst = estimates[q->encodeSubQ(current)];
+
+        vector<tuple<int, int, Edge, Edge>> extensions;
+        extensions.reserve(pow(q->GetNumEdges(), 2));
+        getExtensions(extensions, current);
+        for (const tuple<int, int, Edge, Edge> &ext : extensions) {
+            extRate = calcExtRate(ext);
+            vector<Edge> nextSubQ;
+            nextSubQ.reserve(current.size() + 1);
+            for (const Edge &e : current) {
+                nextSubQ.push_back(e);
+            }
+            nextSubQ.push_back(get<3>(ext));
+            subQEnc = q->encodeSubQ(nextSubQ);
+            if (processed[subQEnc]) {
+                estimates[subQEnc] = max(estimates[subQEnc], currentEst * extRate);
+            } else {
+                estimates[subQEnc] = currentEst * extRate;
+                queue.emplace_back(nextSubQ);
+            }
+        }
+    }
+
+    return estimates[(1 << q->GetNumEdges()) - 1];
+}
+
+double MarkovTable::EstCardGreedyMax(int subquery_index) {
+    pair<string, string> vListAndLabelSeq = q->toVListAndLabelSeq();
+    const string &queryVList = vListAndLabelSeq.first;
+    const string &queryLabelSeq = vListAndLabelSeq.second;
+    decompose(vListAndLabelSeq.first, 2);
+
+    map<string, double> estimates;
+    queue<string> queue;
+
+    // get first level node (size-2)
+    pair<string, double> greedyMax = make_pair<>("", numeric_limits<double>::min());
+    for (const string &startVList : largestMTEntries) {
+        string labelSeq = extractLabelSeq(startVList, queryVList, queryLabelSeq);
+        if (mt_[startVList][labelSeq] > greedyMax.second) {
+            greedyMax.first = startVList;
+            greedyMax.second = mt_[startVList][labelSeq];
+        }
+    }
+    queue.push(greedyMax.first);
+    estimates.insert(greedyMax);
+
+    // extend
+    while (!queue.empty()) {
+        string currentVList = queue.front();
+        queue.pop();
+
+        greedyMax.first = "";
+        greedyMax.second = numeric_limits<double>::min();
+        for (const string &nextVList : ceg[currentVList]) {
+            set<pair<string, string>> extensions = getExtensions(currentVList, nextVList);
+            double nextEst = estimates[currentVList] * getMaxExt(extensions, queryVList, queryLabelSeq);
+            if (nextEst > greedyMax.second) {
+                greedyMax.first = nextVList;
+                greedyMax.second = nextEst;
+            }
+        }
+
+        if (!greedyMax.first.empty()) {
+            queue.push(greedyMax.first);
+            estimates.insert(greedyMax);
+        }
+    }
+
+    return estimates[queryVList];
+}
+
+double MarkovTable::EstCardAllMax(int subquery_index) {
     pair<string, string> vListAndLabelSeq = q->toVListAndLabelSeq();
     const string &queryVList = vListAndLabelSeq.first;
     const string &queryLabelSeq = vListAndLabelSeq.second;
@@ -170,4 +265,50 @@ double MarkovTable::getMaxExt(const set<pair<string, string>> &extensions, const
         maxExt = max(maxExt, ((double) mt_[ext.first][numerLabelSeq]) / mt_[ext.second][denomLabelSeq]);
     }
     return maxExt;
+}
+
+void MarkovTable::getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current) {
+    int minVId;
+    for (const Edge &e : current) {
+        minVId = min(e.src, e.dst);
+        const vector<pair<int, int>> &srcAdj = q->GetAdj(e.src, true);
+        for (const pair<int, int> &nbr : srcAdj) {
+            if (nbr.first < minVId) continue;
+            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, Edge(e.src, nbr.first, nbr.second)));
+        }
+
+        const vector<pair<int, int>> &srcInAdj = q->GetAdj(e.src, false);
+        for (const pair<int, int> &nbr : srcInAdj) {
+            if (nbr.first < minVId) continue;
+            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, Edge(nbr.first, e.src, nbr.second)));
+        }
+
+        const vector<pair<int, int>> &dstAdj = q->GetAdj(e.dst, true);
+        for (const pair<int, int> &nbr : dstAdj) {
+            if (nbr.first < minVId) continue;
+            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::FORWARD, e, Edge(e.dst, nbr.first, nbr.second)));
+        }
+
+        const vector<pair<int, int>> &dstInAdj = q->GetAdj(e.dst, false);
+        for (const pair<int, int> &nbr : dstInAdj) {
+            if (nbr.first < minVId) continue;
+            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, Edge(nbr.first, e.dst, nbr.second)));
+        }
+    }
+}
+
+double MarkovTable::calcExtRate(const tuple<int, int, Edge, Edge> &ext) {
+    const int &baseDir = get<0>(ext);
+    const int &extDir = get<1>(ext);
+    const int &baseEl = get<2>(ext).el;
+    const int &extEl = get<3>(ext).el;
+    if (baseDir < extDir) {
+        return mt2_[baseDir][extDir][baseEl][extEl];
+    } else if (baseDir > extDir) {
+        return mt2_[extDir][baseDir][extEl][baseEl];
+    } else if (baseEl < extEl) {
+        return mt2_[baseDir][extDir][baseEl][extEl];
+    } else {
+        return mt2_[extDir][baseDir][extEl][baseEl];
+    }
 }

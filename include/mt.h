@@ -22,6 +22,9 @@ public:
 	double AggCard();
 	double GetSelectivity();
 
+    double EstCardAllMax(int subquery_index);
+    double EstCardGreedyMax(int subquery_index);
+
 private:
     bool getSubstructureFlag;
     map<string, map<string, long>> mt_;
@@ -33,6 +36,11 @@ private:
 
     set<pair<string, string>> getExtensions(const string &currentVList, const string &nextVList);
     double getMaxExt(const set<pair<string, string>> &extensions, const string &queryVList, const string &queryLabelSeq);
+
+    // new encoding
+    vector<vector<vector<vector<int>>>> mt2_;
+    void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current);
+    double calcExtRate(const tuple<int, int, Edge, Edge> &ext);
 };
 
 #endif
