@@ -31,6 +31,7 @@ private:
     map<string, set<string>> ceg; // small subquery -> its next level nodes
     set<string> largestMTEntries; // longest MT entries
 
+    void OldReadSummary(const char *);
     void decompose(const string &vListString, int mtLen);
     void getDecom(const vector<string> &vListEdges, const int &mtLen, int depth, const string &current, const string &parent);
 
@@ -38,7 +39,10 @@ private:
     double getMaxExt(const set<pair<string, string>> &extensions, const string &queryVList, const string &queryLabelSeq);
 
     // new encoding
-    vector<vector<vector<vector<int>>>> mt2_;
+    vector<long> mt1_;
+    vector<vector<vector<vector<long>>>> mt2_;
+
+    void insertEntryToMT(const vector<string> &entry);
     void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current);
     double calcExtRate(const tuple<int, int, Edge, Edge> &ext);
 };

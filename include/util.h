@@ -93,11 +93,14 @@ struct Edge {
   }
 };
 
-template<> struct hash<Edge> {
-    size_t operator()(const Edge& e) const {
-        return e.src + e.dst + e.el;
-    }
-};
+namespace std {
+    template<>
+    struct hash<Edge> {
+        size_t operator()(const Edge &e) const {
+            return e.src + e.dst + e.el;
+        }
+    };
+}
 
 struct EdgeHasher {
 	std::size_t operator () (const Edge &key) const 
