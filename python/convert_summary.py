@@ -1,6 +1,7 @@
 import sys
 import re
 
+min_label = int(sys.argv[3])
 
 def main():
     output = set([])
@@ -19,31 +20,31 @@ def main():
 
 def encode(v_list, labels):
     if len(labels) == 1:
-        return '0,' + labels[0]
+        return '0,' + str(int(labels[0]) - min_label)
     elif len(labels) == 2:
         v0 = int(v_list[0])
         v1 = int(v_list[1])
         v2 = int(v_list[2])
         v3 = int(v_list[3])
-        l0 = int(labels[0])
-        l1 = int(labels[1])
+        l0 = int(labels[0]) - min_label
+        l1 = int(labels[1]) - min_label
 
         if v0 == v2 or v0 == v3:
             if v0 == v2:
                 if l0 < l1:
-                    return '0;0,' + labels[0] + ';' + labels[1]
+                    return '0;0,' + str(l0) + ';' + str(l1)
                 else:
-                    return '0;0,' + labels[1] + ';' + labels[0]
+                    return '0;0,' + str(l1) + ';' + str(l0)
             else:
-                return '0;1,' + labels[0] + ';' + labels[1]
+                return '0;1,' + str(l0) + ';' + str(l1)
         else:
             if v1 == v2:
-                return '0;1,' + labels[1] + ';' + labels[0]
+                return '0;1,' + str(l1) + ';' + str(l0)
             else:
                 if l0 < l1:
-                    return '1;1,' + labels[0] + ';' + labels[1]
+                    return '1;1,' + str(l0) + ';' + str(l1)
                 else:
-                    return '1;1,' + labels[1] + ';' + labels[0]
+                    return '1;1,' + str(l1) + ';' + str(l0)
 
 
 
