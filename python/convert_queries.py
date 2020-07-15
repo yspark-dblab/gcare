@@ -1,6 +1,8 @@
 import sys
 import os
 
+min_label = int(sys.argv[3])
+
 def main():
     file_prefix = sys.argv[2]
     dir_name = '/'.join(file_prefix.split('/')[:-1])
@@ -33,7 +35,7 @@ def create_query(query, dest_prefix, index):
         dest = int(src_dest[1])
         vertices.add(src)
         vertices.add(dest)
-        edges.append((str(src), label_seq[i], str(dest)))
+        edges.append((str(src), str(int(label_seq[i]) - min_label), str(dest)))
 
     vertices = sorted(list(vertices))
 
