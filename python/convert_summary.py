@@ -3,14 +3,14 @@ import re
 
 
 def main():
-    output = []
+    output = set([])
     with open(sys.argv[1], 'r') as cat:
         for line in cat:
             entry = line.strip().split(',')
             v_list = re.split('-|;', entry[1])
             labels = entry[2].split('->')
             enc = encode(v_list, labels)
-            output.append(enc + ',' + entry[3])
+            output.add(enc + ',' + entry[3])
 
     with open(sys.argv[2], 'w') as out:
         for line in output:
