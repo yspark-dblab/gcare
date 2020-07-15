@@ -22,6 +22,17 @@ void MarkovTable::ReadSummary(const char* fn) {
     string line;
     ifstream catalogueFile(fn);
     if (catalogueFile.is_open()) {
+        mt1_ = vector<long>(g->GetNumELabels());
+        for (int i = 0; i < 2; ++i) {
+            mt2_.emplace_back(vector<vector<vector<long>>>(2));
+            for (int j = 0; j < 2; ++j) {
+                mt2_[i].emplace_back(vector<vector<long>>(g->GetNumELabels()));
+                for (int k = 0; k < g->GetNumELabels(); ++k) {
+                    mt2_[i][j].emplace_back(vector<long>(g->GetNumELabels(), 0));
+                }
+            }
+        }
+
         while (getline(catalogueFile, line)) {
             vector<string> entry;
             boost::split(entry, line, boost::is_any_of(","));
@@ -32,45 +43,15 @@ void MarkovTable::ReadSummary(const char* fn) {
 }
 
 void MarkovTable::insertEntryToMT(const vector<string> &entry) {
-    const long count = stol(entry[3]);
-    vector<string> edges;
-    boost::split(edges, entry[1], boost::is_any_of(";"));
-    if (edges.size() == 1) {
-        mt1_[stoi(entry[2])] = count;
-    } else if (edges.size() == 2) {
-        int vList[4];
-        for (int i = 0; i < edges.size(); ++i) {
-            vector<string> srcDest;
-            boost::split(srcDest, edges[i], boost::is_any_of("-"));
-            vList[i * 2] = stoi(srcDest[0]);
-            vList[i * 2 + 1] = stoi(srcDest[1]);
-        }
-
-        vector<string> labelStrs;
-        boost::split(labelStrs, entry[2], boost::is_any_of("->"));
-        int labels[2] = {stoi(labelStrs[0]), stoi(labelStrs[1])};
-
-        if (vList[0] == vList[2] || vList[0] == vList[3]) {
-            if (vList[0] == vList[2]) {
-                if (labels[0] < labels[1]) {
-                    mt2_[Edge::FORWARD][Edge::FORWARD][labels[0]][labels[1]] = count;
-                } else {
-                    mt2_[Edge::FORWARD][Edge::FORWARD][labels[1]][labels[0]] = count;
-                }
-            } else {
-                mt2_[Edge::FORWARD][Edge::BACKWARD][labels[0]][labels[1]] = count;
-            }
-        } else {
-            if (vList[1] == vList[2]) {
-                mt2_[Edge::FORWARD][Edge::BACKWARD][labels[1]][labels[0]] = count;
-            } else {
-                if (labels[0] < labels[1]) {
-                    mt2_[Edge::BACKWARD][Edge::BACKWARD][labels[0]][labels[1]] = count;
-                } else {
-                    mt2_[Edge::BACKWARD][Edge::BACKWARD][labels[1]][labels[0]] = count;
-                }
-            }
-        }
+    const long count = stol(entry[2]);
+    vector<string> directions;
+    boost::split(directions, entry[0], boost::is_any_of(";"));
+    vector<string> labels;
+    boost::split(labels, entry[1], boost::is_any_of(";"));
+    if (labels.size() == 1) {
+        mt1_[stoi(labels[0])] = count;
+    } else if (labels.size() == 2) {
+        mt2_[stoi(directions[0])][stoi(directions[1])][stoi(labels[0])][stoi(labels[1])] = count;
     }
 }
 
