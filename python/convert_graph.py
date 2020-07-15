@@ -3,7 +3,7 @@ import sys
 vertices = {} # map from old to new ID
 current_vid_max = -1
 edges = []
-min_label = -1
+min_label = float('inf')
 
 with open(sys.argv[1], 'r') as data:
     for line in data:
