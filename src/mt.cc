@@ -176,9 +176,11 @@ double MarkovTable::FastEstCardGreedyMax(int subquery_index) {
                 }
                 nextSubQ.push_back(get<3>(ext));
                 maxNext.first = nextSubQ;
-                maxNext.second = current.second * extRate;
+                maxNext.second = extRate;
             }
         }
+
+        maxNext.second *= current.second;
         current = maxNext;
     }
 
