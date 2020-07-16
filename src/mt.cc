@@ -87,8 +87,9 @@ double MarkovTable::EstCard(int subquery_index) {
     vector<tuple<int, int, Edge, Edge>> twoPaths;
     q->getAll2Paths(twoPaths);
 
+    const int NUM_SUBQ = 1 << q->GetNumEdges();
     int subQEnc, currentEnc;
-    double estimates[1 << q->GetNumEdges()];
+    double estimates[NUM_SUBQ];
     deque<vector<Edge>> queue;
     for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
         vector<Edge> starter(2);
@@ -100,7 +101,7 @@ double MarkovTable::EstCard(int subquery_index) {
     }
 
     double extRate, currentEst;
-    bool processed[1 << q->GetNumEdges()];
+    vector<bool> processed(NUM_SUBQ, false);
     while (!queue.empty()) {
         vector<Edge> current = queue.front();
         queue.pop_front();
@@ -118,12 +119,14 @@ double MarkovTable::EstCard(int subquery_index) {
                 nextSubQ.push_back(e);
             }
             nextSubQ.push_back(get<3>(ext));
+
             subQEnc = q->encodeSubQ(nextSubQ);
             if (processed[subQEnc]) {
                 estimates[subQEnc] = max(estimates[subQEnc], currentEst * extRate);
             } else {
                 estimates[subQEnc] = currentEst * extRate;
                 queue.emplace_back(nextSubQ);
+                processed[subQEnc] = true;
             }
         }
     }
@@ -341,18 +344,20 @@ void MarkovTable::getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions,
 }
 
 double MarkovTable::calcExtRate(const tuple<int, int, Edge, Edge> &ext) {
-    const int &baseDir = get<0>(ext);
-    const int &extDir = get<1>(ext);
-    const int &baseEl = get<2>(ext).el;
-    const int &extEl = get<3>(ext).el;
-    const double &denom = mt1_[baseEl];
+    int baseDir = get<0>(ext);
+    int extDir = get<1>(ext);
+    int baseEl = get<2>(ext).el;
+    int extEl = get<3>(ext).el;
+    double denom = mt1_[baseEl];
     if (baseDir < extDir) {
         return mt2_[baseDir][extDir][baseEl][extEl] / denom;
     } else if (baseDir > extDir) {
         return mt2_[extDir][baseDir][extEl][baseEl] / denom;
-    } else if (baseEl < extEl) {
-        return mt2_[baseDir][extDir][baseEl][extEl] / denom;
     } else {
-        return mt2_[extDir][baseDir][extEl][baseEl] / denom;
+        if (baseEl < extEl) {
+            return mt2_[baseDir][extDir][baseEl][extEl] / denom;
+        } else {
+            return mt2_[extDir][baseDir][extEl][baseEl] / denom;
+        }
     }
 }
