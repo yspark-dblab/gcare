@@ -84,6 +84,10 @@ bool MarkovTable::GetSubstructure(int subquery_index) {
 }
 
 double MarkovTable::EstCard(int subquery_index) {
+    return FastEstCardGreedyMax(subquery_index);
+}
+
+double MarkovTable::FastEstCardAllMax(int subquery_index) {
     vector<tuple<int, int, Edge, Edge>> twoPaths;
     q->getAll2Paths(twoPaths);
 
@@ -132,6 +136,53 @@ double MarkovTable::EstCard(int subquery_index) {
     }
 
     return estimates[(1 << q->GetNumEdges()) - 1];
+}
+
+double MarkovTable::FastEstCardGreedyMax(int subquery_index) {
+    vector<tuple<int, int, Edge, Edge>> twoPaths;
+    q->getAll2Paths(twoPaths);
+
+    double est;
+    pair<vector<Edge>, double> current = pair<vector<Edge>, double>(NULL, numeric_limits<double>::min());
+    for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
+        est = mt2_[get<0>(twoPath)][get<1>(twoPath)][get<2>(twoPath).el][get<3>(twoPath).el];
+        if (est > current.second) {
+            vector<Edge> starter(2);
+            starter[0] = get<2>(twoPath);
+            starter[1] = get<3>(twoPath);
+            current.first = starter;
+            current.second = est;
+        }
+    }
+
+    int subQEnc;
+    double extRate;
+    const int NUM_Q_EDGES = q->GetNumEdges();
+    pair<vector<Edge>, double> maxNext;
+    while (current.first.size() < NUM_Q_EDGES) {
+        subQEnc = q->encodeSubQ(current.first);
+        vector<tuple<int, int, Edge, Edge>> extensions;
+        extensions.reserve(pow(q->GetNumEdges(), 2));
+        getExtensions(extensions, current.first, subQEnc);
+
+        maxNext = pair<vector<Edge>, double>(NULL, numeric_limits<double>::min());
+        for (const tuple<int, int, Edge, Edge> &ext : extensions) {
+            extRate = calcExtRate(ext);
+            if (extRate > maxNext.second) {
+                vector<Edge> nextSubQ;
+                nextSubQ.reserve(current.first.size() + 1);
+                for (const Edge &e : current.first) {
+                    nextSubQ.push_back(e);
+                }
+                nextSubQ.push_back(get<3>(ext));
+                maxNext.first = nextSubQ;
+                maxNext.second = current.second * extRate;
+            }
+        }
+        current = maxNext;
+    }
+
+    return current.second;
 }
 
 double MarkovTable::EstCardGreedyMax(int subquery_index) {

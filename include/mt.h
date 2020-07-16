@@ -24,6 +24,8 @@ public:
 
     double EstCardAllMax(int subquery_index);
     double EstCardGreedyMax(int subquery_index);
+    double FastEstCardAllMax(int subquery_index);
+    double FastEstCardGreedyMax(int subquery_index);
 
 private:
     bool getSubstructureFlag;
