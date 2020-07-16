@@ -87,14 +87,14 @@ double MarkovTable::EstCard(int subquery_index) {
     vector<tuple<int, int, Edge, Edge>> twoPaths;
     q->getAll2Paths(twoPaths);
 
-    int subQEnc;
+    int subQEnc, currentEnc;
     double estimates[1 << q->GetNumEdges()];
     deque<vector<Edge>> queue;
     for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
-        vector<Edge> starter;
-        starter.emplace_back(get<2>(twoPath));
-        starter.emplace_back(get<3>(twoPath));
-        queue.emplace_back(starter);
+        vector<Edge> starter(2);
+        starter[0] = get<2>(twoPath);
+        starter[1] = get<3>(twoPath);
+        queue.push_back(starter);
         subQEnc = q->encodeSubQ(starter);
         estimates[subQEnc] = mt2_[get<0>(twoPath)][get<1>(twoPath)][get<2>(twoPath).el][get<3>(twoPath).el];
     }
@@ -102,13 +102,14 @@ double MarkovTable::EstCard(int subquery_index) {
     double extRate, currentEst;
     bool processed[1 << q->GetNumEdges()];
     while (!queue.empty()) {
-        const vector<Edge> &current = queue.front();
+        vector<Edge> current = queue.front();
         queue.pop_front();
-        currentEst = estimates[q->encodeSubQ(current)];
+        currentEnc = q->encodeSubQ(current);
+        currentEst = estimates[currentEnc];
 
         vector<tuple<int, int, Edge, Edge>> extensions;
         extensions.reserve(pow(q->GetNumEdges(), 2));
-        getExtensions(extensions, current);
+        getExtensions(extensions, current, currentEnc);
         for (const tuple<int, int, Edge, Edge> &ext : extensions) {
             extRate = calcExtRate(ext);
             vector<Edge> nextSubQ;
@@ -304,32 +305,37 @@ double MarkovTable::getMaxExt(const set<pair<string, string>> &extensions, const
     return maxExt;
 }
 
-void MarkovTable::getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current) {
-    int minVId;
+void MarkovTable::getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current, const int &currentEnc) {
+    Edge extE;
     for (const Edge &e : current) {
-        minVId = min(e.src, e.dst);
-        const vector<pair<int, int>> &srcAdj = q->GetAdj(e.src, true);
+        vector<pair<int, int>> srcAdj = q->GetAdj(e.src, true);
         for (const pair<int, int> &nbr : srcAdj) {
-            if (nbr.first < minVId) continue;
-            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, Edge(e.src, nbr.first, nbr.second)));
+            if (e.dst == nbr.first && e.el == nbr.second) continue;
+            extE = Edge(e.src, nbr.first, nbr.second);
+            if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
+            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, extE));
         }
 
-        const vector<pair<int, int>> &srcInAdj = q->GetAdj(e.src, false);
+        vector<pair<int, int>> srcInAdj = q->GetAdj(e.src, false);
         for (const pair<int, int> &nbr : srcInAdj) {
-            if (nbr.first < minVId) continue;
-            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, Edge(nbr.first, e.src, nbr.second)));
+            extE = Edge(nbr.first, e.src, nbr.second);
+            if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
+            extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, extE));
         }
 
-        const vector<pair<int, int>> &dstAdj = q->GetAdj(e.dst, true);
+        vector<pair<int, int>> dstAdj = q->GetAdj(e.dst, true);
         for (const pair<int, int> &nbr : dstAdj) {
-            if (nbr.first < minVId) continue;
-            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::FORWARD, e, Edge(e.dst, nbr.first, nbr.second)));
+            extE = Edge(e.dst, nbr.first, nbr.second);
+            if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
+            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::FORWARD, e, extE));
         }
 
-        const vector<pair<int, int>> &dstInAdj = q->GetAdj(e.dst, false);
+        vector<pair<int, int>> dstInAdj = q->GetAdj(e.dst, false);
         for (const pair<int, int> &nbr : dstInAdj) {
-            if (nbr.first < minVId) continue;
-            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, Edge(nbr.first, e.dst, nbr.second)));
+            if (e.src == nbr.first && e.el == nbr.second) continue;
+            extE = Edge(nbr.first, e.dst, nbr.second);
+            if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
+            extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, extE));
         }
     }
 }

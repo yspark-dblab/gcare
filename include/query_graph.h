@@ -37,6 +37,7 @@ public:
 
     void getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result);
 	int encodeSubQ(const vector<Edge> &edges);
+    int encodeSubQ(const Edge &edge);
 
   string fn_; // XXX
 

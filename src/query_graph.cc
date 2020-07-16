@@ -124,7 +124,8 @@ void QueryGraph::getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result) {
         minVId = min(e.src, e.dst);
         const vector<pair<int, int>> &srcAdj = GetAdj(e.src, true);
         for (const pair<int, int> &nbr : srcAdj) {
-            if (nbr.first < minVId) continue;
+            if (e.dst == nbr.first && e.el == nbr.second) continue;
+            if (nbr.first < minVId || nbr.first < e.dst) continue;
             if (e.el < nbr.second) {
                 result.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, Edge(e.src, nbr.first, nbr.second)));
             } else {
@@ -134,19 +135,20 @@ void QueryGraph::getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result) {
 
         const vector<pair<int, int>> &srcInAdj = GetAdj(e.src, false);
         for (const pair<int, int> &nbr : srcInAdj) {
-            if (nbr.first < minVId) continue;
+            if (nbr.first < minVId || nbr.first < e.dst) continue;
             result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, Edge(nbr.first, e.src, nbr.second)));
         }
 
         const vector<pair<int, int>> &dstAdj = GetAdj(e.dst, true);
         for (const pair<int, int> &nbr : dstAdj) {
-            if (nbr.first < minVId) continue;
+            if (nbr.first < minVId || nbr.first < e.src) continue;
             result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, Edge(e.dst, nbr.first, nbr.second), e));
         }
 
         const vector<pair<int, int>> &dstInAdj = GetAdj(e.dst, false);
         for (const pair<int, int> &nbr : dstInAdj) {
-            if (nbr.first < minVId) continue;
+            if (e.src == nbr.first && e.el == nbr.second) continue;
+            if (nbr.first < minVId || nbr.first < e.src) continue;
             if (e.el < nbr.second) {
                 result.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, Edge(nbr.first, e.dst, nbr.second)));
             } else {
@@ -162,4 +164,8 @@ int QueryGraph::encodeSubQ(const vector<Edge> &edges) {
         enc |= (1 << edge_enc_[e]);
     }
     return enc;
+}
+
+int QueryGraph::encodeSubQ(const Edge &edge) {
+    return edge_enc_[edge];
 }

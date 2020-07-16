@@ -43,7 +43,7 @@ private:
     vector<vector<vector<vector<long>>>> mt2_;
 
     void insertEntryToMT(const vector<string> &entry);
-    void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current);
+    void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current, const int &currentEnc);
     double calcExtRate(const tuple<int, int, Edge, Edge> &ext);
 };
 

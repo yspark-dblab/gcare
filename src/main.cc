@@ -147,6 +147,9 @@ int main(int argc, char** argv) {
     DataGraph g;
     int chkpt = getValueOfPhysicalMemoryUsage();
     g.ReadBinary(data_str.c_str());
+    if (method == string("mt")) {
+        estimator->SetDataGraph(&g);
+    }
     estimator->ReadSummary(summary_str.c_str());
     int num_iter  = vm["iteration"].as<int>();
     namespace fs = std::experimental::filesystem;
