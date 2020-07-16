@@ -167,5 +167,5 @@ int QueryGraph::encodeSubQ(const vector<Edge> &edges) {
 }
 
 int QueryGraph::encodeSubQ(const Edge &edge) {
-    return edge_enc_[edge];
+    return (1 << edge_enc_[edge]);
 }
