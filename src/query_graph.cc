@@ -10,6 +10,8 @@ void QueryGraph::ReadText(const char* fn) {
     edge_.clear();
     adj_.clear();
     in_adj_.clear();
+    adjE_.clear();
+    in_adjE_.clear();
     vl_.clear();
     bound_.clear();
 	ifstream input(fn);
@@ -26,33 +28,40 @@ void QueryGraph::ReadText(const char* fn) {
 			vnum_++;
         }
         if (tok[0][0] == 'e') {
-            if (adj_.size() == 0)
+            if (adj_.size() == 0) {
                 adj_.resize(vnum_);
-            if (in_adj_.size() == 0)
+                adjE_.resize(vnum_);
+            }
+            if (in_adj_.size() == 0) {
                 in_adj_.resize(vnum_);
+                in_adjE_.resize(vnum_);
+            }
             int src = stoi(tok[1]);
             int dst = stoi(tok[2]);
             int el  = stoi(tok[3]);
             assert(src < vnum_);
             assert(dst < vnum_);
             max_el = std::max(max_el, el);
-            edge_.emplace_back(src, dst, el);
+            Edge e = Edge(src, dst, el, edge_.size());
+            edge_.push_back(e);
             adj_[src].push_back(make_pair(dst, el));
             in_adj_[dst].push_back(make_pair(src, el));
+            adjE_[src].push_back(e);
+            in_adjE_[dst].push_back(e);
             //cout << "Q add edge (" << src << ", " << dst << ", " << el << ")" << endl;
             enum_++;
         }
     }
-    if (adj_.size() == 0)
+    if (adj_.size() == 0) {
         adj_.resize(vnum_);
-    if (in_adj_.size() == 0)
+        adjE_.resize(vnum_);
+    }
+    if (in_adj_.size() == 0) {
         in_adj_.resize(vnum_);
+        in_adjE_.resize(vnum_);
+    }
 	vl_num_ = max_vl + 1;
 	el_num_ = max_el + 1;
-
-	for (int i = 0; i < edge_.size(); ++i) {
-	    edge_enc_[edge_[i]] = i;
-	}
 }
 
 void QueryGraph::ReadText(std::vector<std::string> &text) {
@@ -107,6 +116,10 @@ vector<pair<int, int>>& QueryGraph::GetAdj(int v, bool dir) {
     return dir ? adj_[v] : in_adj_[v];
 }
 
+vector<Edge>& QueryGraph::GetAdjE(int v, bool dir) {
+    return dir ? adjE_[v] : in_adjE_[v];
+}
+
 //assume one edge label between any two query vertices
 int QueryGraph::GetELabel(int u, int v) {
 	for (auto& e : adj_[u]) {
@@ -122,37 +135,37 @@ void QueryGraph::getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result) {
     for (int i = 0; i < GetNumEdges(); ++i) {
         e = GetEdge(i);
         minVId = min(e.src, e.dst);
-        const vector<pair<int, int>> &srcAdj = GetAdj(e.src, true);
-        for (const pair<int, int> &nbr : srcAdj) {
-            if (e.dst == nbr.first && e.el == nbr.second) continue;
-            if (nbr.first < minVId || nbr.first < e.dst) continue;
-            if (e.el < nbr.second) {
-                result.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, Edge(e.src, nbr.first, nbr.second)));
+        const vector<Edge> &srcAdj = GetAdjE(e.src, true);
+        for (const Edge &extE : srcAdj) {
+            if (e.dst == extE.dst && e.el == extE.el) continue;
+            if (extE.dst < minVId || extE.dst < e.dst) continue;
+            if (e.el < extE.el) {
+                result.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, extE));
             } else {
-                result.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, Edge(e.src, nbr.first, nbr.second), e));
+                result.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, extE, e));
             }
         }
 
-        const vector<pair<int, int>> &srcInAdj = GetAdj(e.src, false);
-        for (const pair<int, int> &nbr : srcInAdj) {
-            if (nbr.first < minVId || nbr.first < e.dst) continue;
-            result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, Edge(nbr.first, e.src, nbr.second)));
+        const vector<Edge> &srcInAdj = GetAdjE(e.src, false);
+        for (const Edge &extE : srcInAdj) {
+            if (extE.src < minVId || extE.src < e.dst) continue;
+            result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, extE));
         }
 
-        const vector<pair<int, int>> &dstAdj = GetAdj(e.dst, true);
-        for (const pair<int, int> &nbr : dstAdj) {
-            if (nbr.first < minVId || nbr.first < e.src) continue;
-            result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, Edge(e.dst, nbr.first, nbr.second), e));
+        const vector<Edge> &dstAdj = GetAdjE(e.dst, true);
+        for (const Edge &extE : dstAdj) {
+            if (extE.dst < minVId || extE.dst < e.src) continue;
+            result.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, extE, e));
         }
 
-        const vector<pair<int, int>> &dstInAdj = GetAdj(e.dst, false);
-        for (const pair<int, int> &nbr : dstInAdj) {
-            if (e.src == nbr.first && e.el == nbr.second) continue;
-            if (nbr.first < minVId || nbr.first < e.src) continue;
-            if (e.el < nbr.second) {
-                result.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, Edge(nbr.first, e.dst, nbr.second)));
+        const vector<Edge> &dstInAdj = GetAdjE(e.dst, false);
+        for (const Edge &extE : dstInAdj) {
+            if (e.src == extE.src && e.el == extE.el) continue;
+            if (extE.src < minVId || extE.src < e.src) continue;
+            if (e.el < extE.el) {
+                result.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, extE));
             } else {
-                result.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, Edge(nbr.first, e.dst, nbr.second), e));
+                result.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, extE, e));
             }
         }
     }
@@ -161,11 +174,11 @@ void QueryGraph::getAll2Paths(vector<tuple<int, int, Edge, Edge>> &result) {
 int QueryGraph::encodeSubQ(const vector<Edge> &edges) {
     int enc = 0;
     for (const Edge &e : edges) {
-        enc |= (1 << edge_enc_[e]);
+        enc |= (1 << e.id);
     }
     return enc;
 }
 
 int QueryGraph::encodeSubQ(const Edge &edge) {
-    return (1 << edge_enc_[edge]);
+    return (1 << edge.id);
 }

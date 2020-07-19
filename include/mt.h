@@ -25,6 +25,7 @@ public:
     double EstCardAllMax(int subquery_index);
     double EstCardGreedyMax(int subquery_index);
     double FastEstCardAllMax(int subquery_index);
+    double FastEstCardAllMax2(int subquery_index);
     double FastEstCardGreedyMax(int subquery_index);
 
 private:
@@ -47,6 +48,9 @@ private:
     void insertEntryToMT(const vector<string> &entry);
     void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current, const int &currentEnc);
     double calcExtRate(const tuple<int, int, Edge, Edge> &ext);
+    void makeEstAndAddToQueue(const vector<Edge> &current, const double &currentEst, const int &currentEnc,
+            const tuple<int, int, Edge, Edge> &ext, deque<vector<Edge>> &queue,
+            vector<bool> &processed, vector<double> &estimates);
 };
 
 #endif

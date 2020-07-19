@@ -11,9 +11,9 @@ private:
 	int vnum_, enum_, vl_num_, el_num_; 
 	vector<Edge> edge_;
 	vector<vector<pair<int, int>>> adj_, in_adj_;
+	vector<vector<Edge>> adjE_, in_adjE_;
 	vector<int> vl_;
 	vector<int> bound_;
-	unordered_map<Edge, int> edge_enc_;
 
 public:
 	QueryGraph() { 
@@ -21,9 +21,10 @@ public:
 		edge_.clear();
 		adj_.clear();
 		in_adj_.clear();
+		adjE_.clear();
+		in_adjE_.clear();
 		vl_.clear();
 		bound_.clear();
-        edge_enc_.clear();
 	}
 	void ReadText(const char*);
     void ReadText(std::vector<std::string>&);
@@ -31,6 +32,7 @@ public:
 	inline int GetNumEdges() { return enum_; }
 	Edge GetEdge(int i) { return edge_[i]; }; 
 	vector<pair<int, int>>& GetAdj(int, bool);
+    vector<Edge>& GetAdjE(int, bool);
 	int GetELabel(int, int);
 	inline int GetVLabel(int v) { return vl_[v]; }
 	inline int GetBound(int v) { return bound_[v]; }

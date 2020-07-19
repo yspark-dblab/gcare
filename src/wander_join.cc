@@ -42,11 +42,16 @@ void WanderJoin::Init() {
             node_to_v_[offset_] = v;
             offset_++;
         }
+
+        // go thru each edge label in the query
+        // sum up the number of edges of the labels
         for (auto& e : q->GetAdj(v, true)) {
             sum += g->GetNumEdges(e.second);
         }
     }
-    sample_size_ = sum / (offset_ + e_cnt); 
+    // in the case that no vertex label,
+    // sample_size means the avg number of edges per query label
+    sample_size_ = sum / (offset_ + e_cnt);
     sample_size_ *= sample_ratio;
     walk_size_ = offset_ + e_cnt;
     

@@ -64,9 +64,10 @@ struct range {
 };
 
 struct Edge {
-	int src, dst, el;
+	int src, dst, el, id;
 
 	Edge(int s, int d, int e) : src(s), dst(d), el(e) {}
+    Edge(int s, int d, int e, int id) : src(s), dst(d), el(e), id(id) {}
 	Edge() {}
 
 	static const int FORWARD = 0;
