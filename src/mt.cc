@@ -8,8 +8,6 @@
 
 void MarkovTable::Init() {
     getSubstructureFlag = true;
-    ceg.clear();
-    largestMTEntries.clear();
 }
 
 void MarkovTable::PrepareSummaryStructure(DataGraph& g, double ratio) {
