@@ -1,11 +1,19 @@
 import sys
 
+queries = set([])
+if len(sys.argv) == 4:
+    start = int(sys.argv[2])
+    end = int(sys.argv[3])
+    for q in range(start, end + 1):
+        queries.add('Q' + str(q))
+
 lines = []
 
 with open(sys.argv[1], 'r') as result:
     for line in result:
         if 'txt' in line:
-            lines.append(line.strip())
+            if len(queries) == 0 or line.split()[0].split('/')[-2] in queries:
+                lines.append(line.strip())
 
 lines.sort()
 
