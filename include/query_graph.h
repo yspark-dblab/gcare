@@ -42,17 +42,6 @@ public:
     int encodeSubQ(const Edge &edge);
 
   string fn_; // XXX
-
-  pair<string, string> toVListAndLabelSeq() {
-      string vList = "";
-      string labelSeq = "";
-      for (int i = 0; i < edge_.size(); ++i) {
-          pair<string, string> e = edge_[i].toVListAndLabelSeq();
-          vList += ";" + e.first;
-          labelSeq += "->" + e.second;
-      }
-      return make_pair(vList.substr(1), labelSeq.substr(2));
-  }
 };
 
 #endif

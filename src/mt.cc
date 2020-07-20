@@ -55,22 +55,6 @@ void MarkovTable::insertEntryToMT(const vector<string> &entry) {
     }
 }
 
-void MarkovTable::OldReadSummary(const char *fn) {
-    string line;
-    ifstream catalogueFile(fn);
-    if (catalogueFile.is_open()) {
-        while (getline(catalogueFile, line)) {
-            vector<string> entry;
-            boost::split(entry, line, boost::is_any_of(","));
-            if (mt_.count(entry[1]) == 0) {
-                mt_.insert(pair<string, map<string, long>>(entry[1], map<string, long>()));
-            }
-            mt_[entry[1]].insert(pair<string, long>(entry[2], stol(entry[3])));
-        }
-        catalogueFile.close();
-    }
-}
-
 int MarkovTable::DecomposeQuery() {
     return 1;
 }
@@ -84,173 +68,94 @@ bool MarkovTable::GetSubstructure(int subquery_index) {
 }
 
 double MarkovTable::EstCard(int subquery_index) {
-    return FastEstCardAllMax2(subquery_index);
+    return EstCardAllMax(subquery_index);
 }
 
-double MarkovTable::FastEstCardAllMax(int subquery_index) {
-    vector<tuple<int, int, Edge, Edge>> twoPaths;
-    q->getAll2Paths(twoPaths);
-
-    const int NUM_SUBQ = 1 << q->GetNumEdges();
-    int subQEnc, currentEnc;
-    double estimates[NUM_SUBQ];
-    deque<vector<Edge>> queue;
-    for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
-        vector<Edge> starter(2);
-        starter[0] = get<2>(twoPath);
-        starter[1] = get<3>(twoPath);
-        queue.push_back(starter);
-        subQEnc = q->encodeSubQ(starter);
-        estimates[subQEnc] = mt2_[get<0>(twoPath)][get<1>(twoPath)][get<2>(twoPath).el][get<3>(twoPath).el];
-    }
-
-    double extRate, currentEst;
-    vector<bool> processed(NUM_SUBQ, false);
-    while (!queue.empty()) {
-        vector<Edge> current = queue.front();
-        queue.pop_front();
-        currentEnc = q->encodeSubQ(current);
-        currentEst = estimates[currentEnc];
-
-        vector<tuple<int, int, Edge, Edge>> extensions;
-        extensions.reserve(pow(q->GetNumEdges(), 2));
-        getExtensions(extensions, current, currentEnc);
-        for (const tuple<int, int, Edge, Edge> &ext : extensions) {
-            extRate = calcExtRate(ext);
-            vector<Edge> nextSubQ;
-            nextSubQ.reserve(current.size() + 1);
-            for (const Edge &e : current) {
-                nextSubQ.push_back(e);
-            }
-            nextSubQ.push_back(get<3>(ext));
-
-            subQEnc = q->encodeSubQ(nextSubQ);
-            if (processed[subQEnc]) {
-                estimates[subQEnc] = max(estimates[subQEnc], currentEst * extRate);
-            } else {
-                estimates[subQEnc] = currentEst * extRate;
-                queue.emplace_back(nextSubQ);
-                processed[subQEnc] = true;
-            }
-        }
-    }
-
-    return estimates[(1 << q->GetNumEdges()) - 1];
-}
-
-double MarkovTable::FastEstCardAllMax2(int subquery_index) {
+double MarkovTable::EstCardAllMax(int subquery_index) {
     vector<tuple<int, int, Edge, Edge>> twoPaths;
     q->getAll2Paths(twoPaths);
 
     const int NUM_SUBQ = 1 << q->GetNumEdges();
     int subQEnc, currentEnc;
     vector<double> estimates(NUM_SUBQ);
-    deque<vector<Edge>> queue;
+    deque<int> queue;
+    vector<SubQEdgeNode> subQEdgeNodePool;
+    subQEdgeNodePool.reserve(NUM_SUBQ / 2);
     for (const tuple<int, int, Edge, Edge> &twoPath : twoPaths) {
-        vector<Edge> starter(2);
-        starter[0] = get<2>(twoPath);
-        starter[1] = get<3>(twoPath);
-        queue.push_back(starter);
-        subQEnc = q->encodeSubQ(starter);
+        subQEnc = (1 << get<2>(twoPath).id) | (1 << get<3>(twoPath).id);
+        subQEdgeNodePool.emplace_back(0, get<2>(twoPath), 1 << get<2>(twoPath).id, -1);
+        subQEdgeNodePool.emplace_back(1, get<3>(twoPath), subQEnc, subQEdgeNodePool.size() - 1);
+        queue.push_back(subQEdgeNodePool.size() - 1);
         estimates[subQEnc] = mt2_[get<0>(twoPath)][get<1>(twoPath)][get<2>(twoPath).el][get<3>(twoPath).el];
     }
 
-    double extRate, currentEst;
+    double currentEst;
     vector<bool> processed(NUM_SUBQ, false);
     while (!queue.empty()) {
-        vector<Edge> current = queue.front();
+        int currentIdx = queue.front();
         queue.pop_front();
-        currentEnc = q->encodeSubQ(current);
+        SubQEdgeNode *current = &subQEdgeNodePool[currentIdx];
+        currentEnc = current->currentEnc;
         currentEst = estimates[currentEnc];
 
-//        vector<tuple<int, int, Edge, Edge>> extensions;
-//        extensions.reserve(pow(q->GetNumEdges(), 2));
-//        getExtensions(extensions, current, currentEnc);
-        Edge extE;
-        for (const Edge &e : current) {
-            vector<Edge> srcAdj = q->GetAdjE(e.src, true);
+        int i = current->count;
+        while (i >= 0) {
+            vector<Edge> srcAdj = q->GetAdjE(current->edge.src, true);
             for (const Edge &extE : srcAdj) {
-                if (e.dst == extE.dst && e.el == extE.el) continue;
+                if (current->edge.dst == extE.dst && current->edge.el == extE.el) continue;
                 if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
-                makeEstAndAddToQueue(current, currentEst, currentEnc, make_tuple(Edge::FORWARD, Edge::FORWARD, e, extE),
-                        queue, processed, estimates);
-//                extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::FORWARD, e, extE));
+                makeEstAndAddToQueue(subQEdgeNodePool, currentIdx, currentEst,
+                        make_tuple(Edge::FORWARD, Edge::FORWARD, current->edge, extE), queue, processed, estimates);
             }
 
-            vector<Edge> srcInAdj = q->GetAdjE(e.src, false);
+            vector<Edge> srcInAdj = q->GetAdjE(current->edge.src, false);
             for (const Edge &extE : srcInAdj) {
                 if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
-                makeEstAndAddToQueue(current, currentEst, currentEnc, make_tuple(Edge::FORWARD, Edge::BACKWARD, e, extE),
-                                     queue, processed, estimates);
-//                extensions.emplace_back(make_tuple(Edge::FORWARD, Edge::BACKWARD, e, extE));
+                makeEstAndAddToQueue(subQEdgeNodePool, currentIdx, currentEst,
+                        make_tuple(Edge::FORWARD, Edge::BACKWARD, current->edge, extE), queue, processed, estimates);
             }
 
-            vector<Edge> dstAdj = q->GetAdjE(e.dst, true);
+            vector<Edge> dstAdj = q->GetAdjE(current->edge.dst, true);
             for (const Edge &extE : dstAdj) {
                 if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
-                makeEstAndAddToQueue(current, currentEst, currentEnc, make_tuple(Edge::BACKWARD, Edge::FORWARD, e, extE),
-                                     queue, processed, estimates);
-//                extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::FORWARD, e, extE));
+                makeEstAndAddToQueue(subQEdgeNodePool, currentIdx, currentEst,
+                        make_tuple(Edge::BACKWARD, Edge::FORWARD, current->edge, extE), queue, processed, estimates);
             }
 
-            vector<Edge> dstInAdj = q->GetAdjE(e.dst, false);
+            vector<Edge> dstInAdj = q->GetAdjE(current->edge.dst, false);
             for (const Edge &extE : dstInAdj) {
-                if (e.src == extE.src && e.el == extE.el) continue;
+                if (current->edge.src == extE.src && current->edge.el == extE.el) continue;
                 if ((q->encodeSubQ(extE) & currentEnc) != 0) continue;
-                makeEstAndAddToQueue(current, currentEst, currentEnc, make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, extE),
-                                     queue, processed, estimates);
-//                extensions.emplace_back(make_tuple(Edge::BACKWARD, Edge::BACKWARD, e, extE));
+                makeEstAndAddToQueue(subQEdgeNodePool, currentIdx, currentEst,
+                        make_tuple(Edge::BACKWARD, Edge::BACKWARD, current->edge, extE), queue, processed, estimates);
             }
+
+            --i;
+            current = &subQEdgeNodePool[current->prevIdx];
         }
-
-
-//        for (const tuple<int, int, Edge, Edge> &ext : extensions) {
-//            extRate = calcExtRate(ext);
-//            vector<Edge> nextSubQ;
-//            nextSubQ.reserve(current.size() + 1);
-//            for (const Edge &e : current) {
-//                nextSubQ.push_back(e);
-//            }
-//            nextSubQ.push_back(get<3>(ext));
-//
-//            subQEnc = q->encodeSubQ(nextSubQ);
-//            if (processed[subQEnc]) {
-//                estimates[subQEnc] = max(estimates[subQEnc], currentEst * extRate);
-//            } else {
-//                estimates[subQEnc] = currentEst * extRate;
-//                queue.emplace_back(nextSubQ);
-//                processed[subQEnc] = true;
-//            }
-//        }
     }
 
     return estimates[NUM_SUBQ - 1];
 }
 
-void MarkovTable::makeEstAndAddToQueue(const vector<Edge> &current, const double &currentEst, const int &currentEnc,
-        const tuple<int, int, Edge, Edge> &ext, deque<vector<Edge>> &queue,
+void MarkovTable::makeEstAndAddToQueue(vector<SubQEdgeNode> &subQEdgeNodePool, const int &currentIdx, const double &currentEst,
+        const tuple<int, int, Edge, Edge> &ext, deque<int> &queue,
         vector<bool> &processed, vector<double> &estimates) {
     double extRate = calcExtRate(ext);
-    // TODO: use the linked list method
-    vector<Edge> nextSubQ;
-    nextSubQ.reserve(current.size() + 1);
-    for (const Edge &e : current) {
-        nextSubQ.push_back(e);
-    }
-    nextSubQ.push_back(get<3>(ext));
+    const SubQEdgeNode &current = subQEdgeNodePool[currentIdx];
+    int subQEnc = current.currentEnc | (1 << get<3>(ext).id);
 
-//    int subQEnc = q->encodeSubQ(nextSubQ);
-    int subQEnc = currentEnc | (1 << get<3>(ext).id);
     if (processed[subQEnc]) {
         estimates[subQEnc] = max(estimates[subQEnc], currentEst * extRate);
     } else {
         estimates[subQEnc] = currentEst * extRate;
-        queue.emplace_back(nextSubQ);
+        subQEdgeNodePool.emplace_back(current.count + 1, get<3>(ext), subQEnc, currentIdx);
+        queue.emplace_back(subQEdgeNodePool.size() - 1);
         processed[subQEnc] = true;
     }
 }
 
-double MarkovTable::FastEstCardGreedyMax(int subquery_index) {
+double MarkovTable::EstCardGreedyMax(int subquery_index) {
     vector<tuple<int, int, Edge, Edge>> twoPaths;
     q->getAll2Paths(twoPaths);
 
@@ -299,178 +204,12 @@ double MarkovTable::FastEstCardGreedyMax(int subquery_index) {
     return current.second;
 }
 
-double MarkovTable::EstCardGreedyMax(int subquery_index) {
-    pair<string, string> vListAndLabelSeq = q->toVListAndLabelSeq();
-    const string &queryVList = vListAndLabelSeq.first;
-    const string &queryLabelSeq = vListAndLabelSeq.second;
-    decompose(vListAndLabelSeq.first, 2);
-
-    map<string, double> estimates;
-    queue<string> queue;
-
-    // get first level node (size-2)
-    pair<string, double> greedyMax = make_pair<>("", numeric_limits<double>::min());
-    for (const string &startVList : largestMTEntries) {
-        string labelSeq = extractLabelSeq(startVList, queryVList, queryLabelSeq);
-        if (mt_[startVList][labelSeq] > greedyMax.second) {
-            greedyMax.first = startVList;
-            greedyMax.second = mt_[startVList][labelSeq];
-        }
-    }
-    queue.push(greedyMax.first);
-    estimates.insert(greedyMax);
-
-    // extend
-    while (!queue.empty()) {
-        string currentVList = queue.front();
-        queue.pop();
-
-        greedyMax.first = "";
-        greedyMax.second = numeric_limits<double>::min();
-        for (const string &nextVList : ceg[currentVList]) {
-            set<pair<string, string>> extensions = getExtensions(currentVList, nextVList);
-            double nextEst = estimates[currentVList] * getMaxExt(extensions, queryVList, queryLabelSeq);
-            if (nextEst > greedyMax.second) {
-                greedyMax.first = nextVList;
-                greedyMax.second = nextEst;
-            }
-        }
-
-        if (!greedyMax.first.empty()) {
-            queue.push(greedyMax.first);
-            estimates.insert(greedyMax);
-        }
-    }
-
-    return estimates[queryVList];
-}
-
-double MarkovTable::EstCardAllMax(int subquery_index) {
-    pair<string, string> vListAndLabelSeq = q->toVListAndLabelSeq();
-    const string &queryVList = vListAndLabelSeq.first;
-    const string &queryLabelSeq = vListAndLabelSeq.second;
-    decompose(vListAndLabelSeq.first, 2);
-
-    map<string, double> estimates;
-    queue<string> queue;
-    for (const string &startVList : largestMTEntries) {
-        queue.push(startVList);
-        string labelSeq = extractLabelSeq(startVList, queryVList, queryLabelSeq);
-        estimates.insert(pair<string, double>(startVList, mt_[startVList][labelSeq]));
-    }
-
-    // perform BFS
-    set<string> inQueue;
-    while (!queue.empty()) {
-        string currentVList = queue.front();
-        queue.pop();
-
-        for (const string &nextVList : ceg[currentVList]) {
-            set<pair<string, string>> extensions = getExtensions(currentVList, nextVList);
-            double nextEst = estimates[currentVList] * getMaxExt(extensions, queryVList, queryLabelSeq);
-            if (estimates.count(nextVList)) {
-                estimates[nextVList] = max(estimates[nextVList], nextEst);
-            } else {
-                estimates[nextVList] = nextEst;
-            }
-            if (inQueue.count(nextVList)) continue;
-            queue.push(nextVList);
-            inQueue.insert(nextVList);
-        }
-    }
-
-    return estimates[queryVList];
-}
-
 double MarkovTable::AggCard() {
     return card_vec_[0];
 }
 
 double MarkovTable::GetSelectivity() {
     return 1;
-}
-
-void MarkovTable::getDecom(const vector<string> &vListEdges, const int &mtLen, int depth, const string &current, const string &parent) {
-    if (!parent.empty() || depth == mtLen) {
-        string sortedCurrent = sortVList(current);
-        if (depth == mtLen) {
-            largestMTEntries.insert(sortedCurrent);
-        }
-        if (!parent.empty()) {
-            ceg[sortVList(parent)].insert(sortedCurrent);
-            if (depth == vListEdges.size()) {
-                ceg.insert(pair<string, set<string>>(sortedCurrent, set<string>()));
-                return;
-            }
-        }
-    }
-
-    for (int i = 0; i < vListEdges.size(); i++) {
-        string next = vListEdges[i];
-        string updated;
-        if (current.empty()) {
-            updated = next;
-        } else {
-            updated.append(current);
-            updated.append(";");
-            updated.append(next);
-        }
-        if (depth > 0 && !isAcyclicConnected(updated)) continue;
-        getDecom(vListEdges, mtLen, depth + 1, updated, current);
-    }
-}
-
-void MarkovTable::decompose(const string &vListString, int mtLen) {
-    vector<string> vListEdges;
-    boost::split(vListEdges, vListString, boost::is_any_of(";"));
-    getDecom(vListEdges, mtLen, 0, "", "");
-}
-
-set<pair<string, string>> MarkovTable::getExtensions(const string &currentVListStr, const string &nextVListStr) {
-    vector<string> currentVList, nextVList;
-    boost::split(currentVList, currentVListStr, boost::is_any_of(";"));
-    boost::split(nextVList, nextVListStr, boost::is_any_of(";"));
-
-    set<string> currentEdges;
-    string ext;
-
-    int j = 0;
-    for (int i = 0; i < nextVList.size(); ++i) {
-        if (nextVList[i] == currentVList[j]) {
-            currentEdges.insert(currentVList[j]);
-            ++j;
-        } else {
-            ext = nextVList[i];
-            break;
-        }
-    }
-
-    set<pair<string, string>> numerAndDenom;
-    string numerator;
-    for (int i = 0; i < currentVList.size(); ++i) {
-        if (i < j) {
-            numerator = currentVList[i] + ";" + ext;
-        } else {
-            numerator = ext + ";" + currentVList[i];
-        }
-
-        if (isAcyclicConnected(numerator)) {
-            numerAndDenom.insert(pair<string, string>(numerator, currentVList[i]));
-        }
-    }
-
-    return numerAndDenom;
-}
-
-double MarkovTable::getMaxExt(const set<pair<string, string>> &extensions, const string &queryVList, const string &queryLabelSeq) {
-    double maxExt = numeric_limits<double>::min();
-    string numerLabelSeq, denomLabelSeq;
-    for (const pair<string, string> &ext : extensions) {
-        numerLabelSeq = extractLabelSeq(ext.first, queryVList, queryLabelSeq);
-        denomLabelSeq = extractLabelSeq(ext.second, queryVList, queryLabelSeq);
-        maxExt = max(maxExt, ((double) mt_[ext.first][numerLabelSeq]) / mt_[ext.second][denomLabelSeq]);
-    }
-    return maxExt;
 }
 
 void MarkovTable::getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current, const int &currentEnc) {

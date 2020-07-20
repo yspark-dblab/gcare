@@ -24,22 +24,9 @@ public:
 
     double EstCardAllMax(int subquery_index);
     double EstCardGreedyMax(int subquery_index);
-    double FastEstCardAllMax(int subquery_index);
-    double FastEstCardAllMax2(int subquery_index);
-    double FastEstCardGreedyMax(int subquery_index);
 
 private:
     bool getSubstructureFlag;
-    map<string, map<string, long>> mt_;
-    map<string, set<string>> ceg; // small subquery -> its next level nodes
-    set<string> largestMTEntries; // longest MT entries
-
-    void OldReadSummary(const char *);
-    void decompose(const string &vListString, int mtLen);
-    void getDecom(const vector<string> &vListEdges, const int &mtLen, int depth, const string &current, const string &parent);
-
-    set<pair<string, string>> getExtensions(const string &currentVList, const string &nextVList);
-    double getMaxExt(const set<pair<string, string>> &extensions, const string &queryVList, const string &queryLabelSeq);
 
     // new encoding
     vector<long> mt1_;
@@ -48,9 +35,9 @@ private:
     void insertEntryToMT(const vector<string> &entry);
     void getExtensions(vector<tuple<int, int, Edge, Edge>> &extensions, const vector<Edge> &current, const int &currentEnc);
     double calcExtRate(const tuple<int, int, Edge, Edge> &ext);
-    void makeEstAndAddToQueue(const vector<Edge> &current, const double &currentEst, const int &currentEnc,
-            const tuple<int, int, Edge, Edge> &ext, deque<vector<Edge>> &queue,
-            vector<bool> &processed, vector<double> &estimates);
+    void makeEstAndAddToQueue(vector<SubQEdgeNode> &subQEdgeNodePool, const int &currentIdx, const double &currentEst,
+                              const tuple<int, int, Edge, Edge> &ext, deque<int> &queue,
+                              vector<bool> &processed, vector<double> &estimates);
 };
 
 #endif

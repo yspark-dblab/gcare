@@ -88,10 +88,16 @@ struct Edge {
 	bool operator==(const Edge& other) const {
 		return src == other.src && dst == other.dst && el == other.el;
 	}
+};
 
-  pair<string, string> toVListAndLabelSeq() {
-    return make_pair(to_string(src) + "-" + to_string(dst), to_string(el));
-  }
+struct SubQEdgeNode {
+    int count;
+    Edge edge;
+    int prevIdx;
+
+    int currentEnc;
+
+    SubQEdgeNode(int c, Edge e, int enc, int prevIdx): count(c), edge(e), prevIdx(prevIdx), currentEnc(enc) {}
 };
 
 namespace std {
