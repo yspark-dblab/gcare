@@ -1,17 +1,7 @@
 import sys
 import re
-# write a function to decompose all the 2-paths from a given query
 
-# for every pair, depending on dir combination, call corresponding function
- # ->->
- # <-->
- # -><-
-# opt: if dir comb and labels are the same, see if we have computed it, then just re-use the cardinality
-
-# have a graph structure of (label -> (src, dst)) so that we can iterate thru the edges, and compute degrees
- # also have graph structures using src/dst as key (to extend)
-
-template_id = sys.argv[3]
+template_id = 0
 query_len = 0
 label2srcdest = {}
 src2label2dst = {}
@@ -23,14 +13,38 @@ pcat_max_deg = {}
 
 def main():
     global query_len
+    global template_id
+    global queries
+    global cat2
+    global cat1
+    global pcat_max_deg
+
     read_graph(sys.argv[1])
-    read_queries(sys.argv[2])
-    for query in queries:
-        query_len = len(query)
-        decoms = decompose(query)
-        compute_cat_and_max_deg(decoms)
-        compute_cat1(query)
-    persist(sys.argv[4], sys.argv[5], sys.argv[6])
+    query_files = sys.argv[2].split(',')
+    template_ids = sys.argv[3].split(',')
+    cat_files = sys.argv[4].split(',')
+    pcat_files = sys.argv[5].split(',')
+    pcat_maxdeg_files = sys.argv[6].split(',')
+
+    for i in range(len(query_files)):
+        print('Processing ' + query_files[i])
+        read_queries(query_files[i])
+        template_id = template_ids[i]
+        progress = 0
+        for query in queries:
+            query_len = len(query)
+            decoms = decompose(query)
+            compute_cat_and_max_deg(decoms)
+            compute_cat1(query)
+
+            progress += (1 / len(queries) * 100)
+            print('Computing: ' + str(int(progress)) + '%', end='\r', flush=True)
+        persist(cat_files[i], pcat_files[i], pcat_maxdeg_files[i])
+
+        queries = []
+        cat2 = {}
+        cat1 = {}
+        pcat_max_deg = {}
 
 def compute_cat_and_max_deg(decoms):
     for decom in decoms:
