@@ -186,7 +186,16 @@
         # download the dataset.tar.gz from the link
         tar -zxvf dataset.tar.gz
         ```
-        
+## Figures of Experimental Results
+We follow the next procedures to report the accuracy of techniques in the paper.
+    1) We run each query 30 times and compute q-errors for each estimate in a set of 30 estimates.
+    2) We obtain a distribution consisting of 30 * (# of queries in each group on the x-axis) q-error values. For example, in Figure 6(c), the q-error distribution for star queries consists of 30 * 318 q-error values since the number of star queries for YAGO dataset is 318.
+    3) From this distribution, we report the average and standard deviation for LUBM and report the 5%, 25%, 50%, 75%, and 95% percentiles for the other datasets in Figures 6-8.
+    
+In Figures 6-8, we differentiate over- and under-estimation cases for better explanation of estimation behaviors. However, for the same query and estimator, some out of 30 trials may fall in under-estimation cases while others fall in over-estimation cases. Therefore, averaging the 30 q-errors for each query may hard to answer whether an estimator under-estimates for this query. In that sense, for each query group Q, we plot 5%, 25%, 50%, 75%, and 95% percentiles of 30 * |Q| trials in Figures 6-8.
+    
+If one does not want to differentiate between over- and under-estimation cases but just compare q-error between queries (i.e., how large is the average relative error on a specific query?), one could aggregate the q-errors over the trials.
+
 ## Errata
 * For LUBM, CharacteristicSets, SumRDF, and BoundSketch spend 0.96, 12.26, and <a><img src="https://drive.google.com/uc?export=view&id=16bziI4RL0NWtB7JrylVo2t8cLtQrgqpN"></a><a><img src="https://drive.google.com/uc?export=view&id=1uQ3D5nZ1o_c5FbGpX9-NpBXtaVphK8xB"></a>seconds, respectively.
 * For AIDS, CharacteristicSets, SumRDF, and BoundSketch spend 0.07, 0.64, and <a><img src="https://drive.google.com/uc?export=view&id=1X1T3kXnnDdSnCoW2zt5U49tvgBl8CLOx"></a><a><img src="https://drive.google.com/uc?export=view&id=1Rq-dSewWqaOKy49qjgTTIJ8QpZrFVDmy"></a>seconds, respectively.
