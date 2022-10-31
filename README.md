@@ -106,6 +106,11 @@
     \<label\> is the query vertex label, and \<dvid\> is the 
     data vertex id of a data vertex bound to this query vertex.
     The default value of \<label\> and \<dvid\> is -1.
+    The meaning of the default value is as follows.
+    A query vertex with \<label\>=-1 can be matched with any data vertices regardless of their data vertex labels.
+    A query vertex with \<dvid\>=-1 can be matched with any data vertices regardless of their data vertex ids.
+    
+
     
     * Next M lines represent M query edges. 
     Each line should be e \<id1\> \<id2\> \<label\>, representing a directed, 
@@ -148,7 +153,9 @@
         - HUMAN [3] - datasets/human/human.txt : Figure 7 and 8
         - AIDS [4] - datasets/aids/aids.txt : Figure 7, 8, 9, and 10
         - YAGO [5] - datasets/yago/yago.txt : Figure 6
-    
+
+        For RDF datasets, the data graph files are the results of type-aware transformation [6], thus each label represents a certain type.
+
     * The following is a typical example.
        ```
        t # 16
@@ -224,3 +231,4 @@ In Proceedings of the 2020 International Conference on Management of Data. 1099-
 [5] Fabian M Suchanek, Gjergji Kasneci, and Gerhard Weikum. 2008. Yago:
      A large ontology from wikipedia and wordnet. Journal of Web Semantics 6, 3 (2008), 203–217.   
 
+[6] Jinha Kim, Hyungyu Shin, Wook-Shin Han, Sungpack Hong, Hassan Chafi. 2015. Taming Subgraph Isomorphism for RDF Query Processing. Proceedings of the VLDB Endowment, 8(11).
